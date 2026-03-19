@@ -1,4 +1,4 @@
-# PrivacyEscrowZK
+# PMPP
 
 Merchant privacy for the Machine Payments Protocol (MPP). A drop-in escrow replacement that uses Poseidon-based note commitments and Groth16 ZK-SNARKs so merchants can receive payments without revealing their identity on-chain.
 
@@ -11,7 +11,7 @@ Deployed on **Tempo mainnet** (Chain 4217).
 
 ## How it works
 
-Standard MPP escrows pay merchants directly — the entire payer→merchant graph is public. PrivacyEscrowZK replaces direct payouts with an intermediate note layer:
+Standard MPP escrows pay merchants directly — the entire payer→merchant graph is public. PMPP replaces direct payouts with an intermediate note layer:
 
 ```
 1. OPEN        Payer deposits tokens. Payee sets merchantCommitment = Poseidon(pubKey, blinding).
@@ -22,18 +22,6 @@ Standard MPP escrows pay merchants directly — the entire payer→merchant grap
 ```
 
 The payer→merchant link is cryptographically broken. Clients sign the same EIP-712 vouchers as standard MPP — they are unaware the privacy layer exists.
-
-### What's hidden
-
-| Data | Standard Escrow | PrivacyEscrowZK |
-|---|---|---|
-| Payer identity | Visible | Visible |
-| Deposit amounts | Visible | Visible |
-| Which merchant | Visible | **Hidden** |
-| Merchant payout address | Visible | **Hidden** |
-| Payer → merchant link | Visible | **Hidden** |
-
-Privacy strength scales with the number of merchants sharing the same escrow instance.
 
 ## Repository structure
 
@@ -177,7 +165,7 @@ bash script/mainnet-deploy.sh
 
 The deploy script uses `forge create` with Tempo's passkey-based smart account (`--tempo.access-key`, `--tempo.root-account`, `--tempo.fee-token`). It deploys PrivacyEscrow and ChannelPayeeFactory, saving addresses to `script/mainnet-addrs.env`.
 
-For PrivacyEscrowZK, the Groth16Verifier and Poseidon libraries must be deployed first, then the escrow is constructed with the verifier address.
+For PMPP, the Groth16Verifier and Poseidon libraries must be deployed first, then the escrow is constructed with the verifier address.
 
 ## Tech stack
 
