@@ -1,0 +1,25 @@
+{
+  "name": "degen-oracle",
+  "version": "0.0.1",
+  "description": "Pay-per-prediction contrarian market takes, powered by PrivacyEscrow",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "observer": "tsx src/observer.ts",
+    "observer:compare": "tsx src/observer-compare.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1",
+    "circomlibjs": "^0.1.7",
+    "hono": "^4",
+    "mppx": "latest",
+    "openai": "^4",
+    "snarkjs": "^0.7.6",
+    "viem": "^2"
+  },
+  "devDependencies": {
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}

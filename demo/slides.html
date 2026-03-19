@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMPP — Private Machine Payments Protocol</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+<style>
+  :root {
+    --r-background-color: #0a0a14;
+    --r-main-color: #e0e0e8;
+    --r-heading-color: #ffffff;
+    --r-link-color: #60a5fa;
+    --r-heading-font: system-ui, -apple-system, sans-serif;
+    --r-main-font: system-ui, -apple-system, sans-serif;
+    --r-code-font: 'SF Mono', 'Fira Code', monospace;
+    --r-main-font-size: 32px;
+  }
+  .reveal { font-weight: 300; }
+  .reveal h1, .reveal h2, .reveal h3 { font-weight: 600; letter-spacing: -0.02em; }
+  .reveal h1 { font-size: 2.2em; }
+  .reveal h2 { font-size: 1.5em; }
+  .reveal code { font-size: 0.85em; }
+
+  .reveal .red { color: #f87171; }
+  .reveal .green { color: #4ade80; }
+  .reveal .yellow { color: #fbbf24; }
+  .reveal .blue { color: #60a5fa; }
+  .reveal .dim { color: #666; }
+  .reveal .mono { font-family: var(--r-code-font); }
+
+  .reveal .tag {
+    display: inline-block;
+    font-size: 0.55em;
+    padding: 4px 14px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+    vertical-align: middle;
+    margin-left: 12px;
+  }
+  .tag-red { background: #3a1525; color: #f87171; }
+  .tag-green { background: #1a3a2a; color: #4ade80; }
+
+  /* Graph diagrams */
+  .graph-box {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 32px 40px;
+    margin: 20px auto;
+    max-width: 800px;
+    text-align: left;
+  }
+  .graph-box.exposed { border-color: #f87171; }
+  .graph-box.private { border-color: #4ade80; }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 14px 0;
+    font-size: 0.75em;
+    font-family: var(--r-code-font);
+  }
+  .flow-node {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: #555; font-size: 1.2em; }
+
+  .node-payer    { background: #1e3a5f; color: #60a5fa; border: 1px solid #60a5fa; }
+  .node-escrow   { background: #3a3520; color: #fbbf24; border: 1px solid #fbbf24; }
+  .node-merchant { background: #1a3a2a; color: #4ade80; border: 1px solid #4ade80; }
+  .node-hidden   { background: #3a1525; color: #f87171; border: 1px solid #f87171; }
+  .node-note     { background: #2a1a3a; color: #c084fc; border: 1px solid #c084fc; }
+  .node-fresh    { background: #1a2a3a; color: #67e8f9; border: 1px solid #67e8f9; }
+  .node-zk       { background: #0a2a1a; color: #4ade80; border: 2px solid #4ade80; }
+
+  /* Comparison table */
+  .cmp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.65em;
+    margin: 20px auto;
+  }
+  .cmp-table th, .cmp-table td {
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid #2a2a3e;
+  }
+  .cmp-table th {
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85em;
+  }
+  .cmp-table td:nth-child(2) { color: #f87171; }
+  .cmp-table td:nth-child(3) { color: #4ade80; }
+
+  /* Code blocks */
+  .code-box {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 10px;
+    padding: 20px 28px;
+    font-family: var(--r-code-font);
+    font-size: 0.55em;
+    text-align: left;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin: 16px auto;
+  }
+  .code-box .kw { color: #c084fc; }
+  .code-box .fn { color: #60a5fa; }
+  .code-box .str { color: #4ade80; }
+  .code-box .cmt { color: #555; font-style: italic; }
+  .code-box .type { color: #fbbf24; }
+  .code-box .num { color: #f87171; }
+
+  /* Stats */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 24px auto;
+    max-width: 750px;
+  }
+  .stat-card {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-card .val { font-size: 1.8em; font-weight: 700; }
+  .stat-card .lbl { font-size: 0.55em; color: #666; margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Circuit diagram */
+  .circuit-box {
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 24px 32px;
+    margin: 16px auto;
+    max-width: 720px;
+    text-align: left;
+  }
+  .signal-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+    font-size: 0.6em;
+    font-family: var(--r-code-font);
+  }
+  .signal-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    min-width: 65px;
+    text-align: center;
+  }
+  .badge-public  { background: #1a3a2a; color: #4ade80; }
+  .badge-private { background: #3a1525; color: #f87171; }
+
+  .circuit-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin: 12px 0;
+    font-size: 0.6em;
+  }
+  .step-num {
+    background: #2a2a3e;
+    color: #e0e0e8;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* Two-column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  .two-col > div { text-align: left; }
+
+  /* Subtitle */
+  .subtitle {
+    font-size: 0.6em;
+    color: #666;
+    margin-top: 8px;
+  }
+
+  /* Deployed badge */
+  .deployed-badge {
+    display: inline-block;
+    background: #1a3a2a;
+    border: 1px solid #4ade80;
+    color: #4ade80;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.5em;
+    font-family: var(--r-code-font);
+    margin-top: 12px;
+  }
+
+  /* Slide-specific */
+  .problem-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+    font-size: 0.7em;
+  }
+  .problem-icon { font-size: 1.4em; }
+
+  .reveal section img {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  /* Per-channel smart accounts */
+  .account-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 0.6em;
+    font-family: var(--r-code-font);
+    margin: 20px auto;
+    max-width: 650px;
+  }
+  .account-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    background: #12121a;
+    border: 1px solid #2a2a3e;
+    border-radius: 8px;
+  }
+  .account-step .step-n {
+    color: #fbbf24;
+    font-weight: 700;
+    min-width: 20px;
+  }
+</style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ================================================================ -->
+<!-- TITLE -->
+<!-- ================================================================ -->
+<section>
+  <h1 style="font-size:1.8em">🔒 PMPP</h1>
+  <p style="font-size:0.8em; color:#888; margin-top: -8px">Private Machine Payments Protocol</p>
+  <div style="margin-top: 40px">
+    <div class="deployed-badge">
+      Deployed on Tempo Mainnet · Chain 4217
+    </div>
+  </div>
+  <p style="font-size:0.45em; color:#444; margin-top: 40px">
+    Poseidon Hashing · Groth16 ZK-SNARKs · Incremental Merkle Tree · Per-Channel Smart Accounts
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- THE PROBLEM -->
+<!-- ================================================================ -->
+<section>
+  <h2>The Problem <span class="tag tag-red">🚨 Everything Exposed</span></h2>
+  <p style="font-size:0.65em; color:#888">Standard MPP session escrow — fully transparent payment graph</p>
+
+  <div class="graph-box exposed" style="margin-top: 30px">
+    <div class="flow-row">
+      <div class="flow-node node-payer">Payer A</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-escrow">Escrow</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-merchant">Merchant X</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node node-payer">Payer B</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-escrow">Escrow</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-merchant">Merchant Y</div>
+    </div>
+    <div class="flow-row">
+      <div class="flow-node node-payer">Payer C</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-escrow">Escrow</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-merchant">Merchant X</div>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; font-size: 0.6em">
+    <div class="problem-item"><span class="problem-icon">👁️</span> <span>Any observer can see <span class="red">which merchant</span> each payer is using</span></div>
+    <div class="problem-item"><span class="problem-icon">📊</span> <span>Complete <span class="red">payer → merchant revenue graph</span> is public</span></div>
+    <div class="problem-item"><span class="problem-icon">🤖</span> <span>1000 AI agents' <span class="red">entire economic activity</span> is on-chain</span></div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- THE SOLUTION — OVERVIEW -->
+<!-- ================================================================ -->
+<section>
+  <h2>The Solution <span class="tag tag-green">🔒 ZK Privacy</span></h2>
+  <p style="font-size:0.65em; color:#888">Break the payer → merchant link with zero-knowledge proofs</p>
+
+  <div class="graph-box private" style="margin-top: 30px">
+    <div style="display:flex; align-items:center; justify-content:center; gap:12px; font-size:0.75em; font-family:var(--r-code-font)">
+      <div style="display:flex; flex-direction:column; gap:8px">
+        <div class="flow-node node-payer">Payer A</div>
+        <div class="flow-node node-payer">Payer B</div>
+        <div class="flow-node node-payer">Payer C</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-escrow">Escrow</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-note">📎 Shared Note Pool</div>
+    </div>
+    <div style="text-align:center; color:#555; font-size:0.7em; margin: 12px 0">· · · time passes · · ·</div>
+    <div class="flow-row">
+      <div class="flow-node node-zk">ZK Proof ✓</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node node-fresh">Fresh Address</div>
+      <div style="color:#4ade80; font-size:0.8em; margin-left:8px">← no link to payer</div>
+    </div>
+  </div>
+
+  <p class="fragment" style="font-size:0.55em; color:#4ade80; margin-top: 24px">
+    Drop-in replacement — clients sign the exact same EIP-712 vouchers
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- PER-CHANNEL SMART ACCOUNTS -->
+<!-- ================================================================ -->
+<section>
+  <h2>Per-Channel Smart Accounts</h2>
+  <p style="font-size:0.55em; color:#888">Hide merchant identity even at channel-open time</p>
+
+  <div style="margin-top:20px; font-size:0.6em; color:#aaa; text-align:left; max-width:700px; margin-left:auto; margin-right:auto">
+    <p><span class="red">Problem:</span> The escrow requires <code style="color:#fbbf24">msg.sender == payee</code> for <code>setMerchantCommitment()</code> and <code>close()</code>. If the merchant uses their real address, the link is visible.</p>
+    <p class="fragment" data-fragment-index="1"><span class="green">Solution:</span> A factory deploys a fresh <code>ChannelPayee</code> contract per session via <span class="yellow">CREATE2</span>.</p>
+  </div>
+
+  <div class="account-flow fragment" data-fragment-index="2">
+    <div class="account-step">
+      <div class="step-n">1</div>
+      <div>Merchant generates a <span class="yellow">one-time keypair</span> for this session</div>
+    </div>
+    <div class="account-step">
+      <div class="step-n">2</div>
+      <div><span class="mono blue">Factory.computePayeeAddress(key)</span> → deterministic address (before deploy)</div>
+    </div>
+    <div class="account-step">
+      <div class="step-n">3</div>
+      <div>Server tells payer to open channel to that address — <span class="green">not the merchant's real address</span></div>
+    </div>
+    <div class="account-step">
+      <div class="step-n">4</div>
+      <div><span class="mono blue">Factory.deploy(key)</span> — anyone can call, no special permissions</div>
+    </div>
+    <div class="account-step">
+      <div class="step-n">5</div>
+      <div>Relayers forward merchant-signed instructions (setCommitment, close)</div>
+    </div>
+  </div>
+
+  <p class="fragment" style="font-size:0.55em; color:#4ade80; margin-top:20px">
+    On-chain: <code>payee = 0x8a3f…</code> — a disposable contract, not a merchant
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- ARCHITECTURE — 3-PHASE FLOW -->
+<!-- ================================================================ -->
+<section>
+  <h2>Architecture</h2>
+  <p style="font-size:0.55em; color:#888">Three phases — same vouchers, completely different settlement path</p>
+
+  <div style="display:flex; gap:16px; margin-top:24px; font-size:0.5em">
+    <!-- Phase 1 -->
+    <div style="flex:1; background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#60a5fa; font-weight:700; margin-bottom:10px">① OPEN + BIND</div>
+      <div style="color:#aaa; line-height:1.6">
+        Payer deposits tokens to escrow<br>
+        Payee calls <span style="font-family:var(--r-code-font); color:#60a5fa">setMerchantCommitment</span><br>
+        <span style="font-family:var(--r-code-font); font-size:0.9em; color:#c084fc">
+          commitment = Poseidon(pubKey, blinding)
+        </span><br>
+        Opaque hash — <span class="green">pubKey never on-chain</span><br>
+        Required before any settle
+      </div>
+    </div>
+    <!-- Phase 2 -->
+    <div style="flex:1; background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#fbbf24; font-weight:700; margin-bottom:10px">② SETTLE</div>
+      <div style="color:#aaa; line-height:1.6">
+        Verify EIP-712 voucher signature<br>
+        Compute delta from cumulative amount<br>
+        Mint <span class="yellow">noteCommitment</span> into Merkle tree<br>
+        <span style="font-family:var(--r-code-font); font-size:0.9em; color:#c084fc">
+          = Poseidon(asset, Δ, mc, ch, rand)
+        </span><br><br>
+        <span class="green">💰 Funds stay in contract</span>
+      </div>
+    </div>
+    <!-- Phase 3 -->
+    <div style="flex:1; background:#12121a; border:1px solid #4ade80; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#4ade80; font-weight:700; margin-bottom:10px">③ REDEEM (ZK)</div>
+      <div style="color:#aaa; line-height:1.6">
+        Submit <span class="green">Groth16 proof</span><br>
+        Verifier checks note preimage<br>
+        + Merkle membership + nullifier<br>
+        <span class="green">ALL private inputs stay hidden</span><br><br>
+        <span class="green">🔒 No link to original payer</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- BEFORE / AFTER COMPARISON -->
+<!-- ================================================================ -->
+<section>
+  <h2>Before vs After</h2>
+  <p style="font-size:0.55em; color:#888">What an on-chain observer sees</p>
+
+  <table class="cmp-table" style="margin-top: 24px">
+    <tr>
+      <th>Data Point</th>
+      <th>Standard Escrow</th>
+      <th>PrivacyEscrowZK</th>
+    </tr>
+    <tr>
+      <td>Payer identity</td>
+      <td>Visible</td>
+      <td>Visible</td>
+    </tr>
+    <tr>
+      <td>Session funding amount</td>
+      <td>Visible</td>
+      <td>Visible</td>
+    </tr>
+    <tr class="fragment">
+      <td style="font-weight:600">Which merchant</td>
+      <td>❌ Visible — direct address</td>
+      <td>✅ Hidden — Poseidon commitment</td>
+    </tr>
+    <tr class="fragment">
+      <td style="font-weight:600">Merchant payout address</td>
+      <td>❌ Visible — same as payee</td>
+      <td>✅ Hidden — fresh address per redeem</td>
+    </tr>
+    <tr class="fragment">
+      <td style="font-weight:600">Payer → merchant link</td>
+      <td>❌ Trivially reconstructed</td>
+      <td>✅ Cryptographically broken</td>
+    </tr>
+    <tr class="fragment">
+      <td style="font-weight:600">Redemption calldata</td>
+      <td>❌ All preimage fields exposed</td>
+      <td>✅ Only proof + nullifier</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<!-- ZK CIRCUIT -->
+<!-- ================================================================ -->
+<section>
+  <h2>The ZK Circuit</h2>
+  <p style="font-size:0.55em; color:#888">note_redeem.circom — what the Groth16 proof actually proves</p>
+
+  <div class="circuit-box" style="margin-top: 20px">
+    <div style="font-size:0.55em; color:#888; font-weight:600; margin-bottom:12px">SIGNALS</div>
+    <div class="signal-row"><span class="signal-badge badge-public">public</span> nullifier, merkleRoot, amount, asset, recipient</div>
+    <div class="signal-row"><span class="signal-badge badge-private">private</span> merchantPubKey, blinding, noteRandomness, channelId, siblings[20]</div>
+
+    <div style="border-top:1px solid #2a2a3e; margin:16px 0"></div>
+    <div style="font-size:0.55em; color:#888; font-weight:600; margin-bottom:12px">CONSTRAINTS</div>
+
+    <div class="circuit-step">
+      <div class="step-num">1</div>
+      <div><span class="yellow">merchantCommitment</span> = Poseidon(<span class="red">merchantPubKey</span>, <span class="red">blinding</span>)</div>
+    </div>
+    <div class="circuit-step">
+      <div class="step-num">2</div>
+      <div><span class="yellow">noteCommitment</span> = Poseidon(asset, amount, mc, <span class="red">channelId</span>, <span class="red">noteRandomness</span>)</div>
+    </div>
+    <div class="circuit-step">
+      <div class="step-num">3</div>
+      <div>nullifier === Poseidon(noteCommitment, <span class="red">merchantPubKey</span>)</div>
+    </div>
+    <div class="circuit-step">
+      <div class="step-num">4</div>
+      <div>merkleRoot === MerkleProof(noteCommitment, <span class="red">siblings</span>, <span class="red">pathIndices</span>)</div>
+    </div>
+    <div class="circuit-step">
+      <div class="step-num">5</div>
+      <div>recipient constrained <span class="dim">— prevents front-running proof substitution</span></div>
+    </div>
+  </div>
+
+  <div class="stat-grid" style="grid-template-columns: repeat(3, 1fr); max-width:600px; margin-top:20px">
+    <div class="stat-card">
+      <div class="val green">~5,700</div>
+      <div class="lbl">constraints</div>
+    </div>
+    <div class="stat-card">
+      <div class="val blue">20</div>
+      <div class="lbl">Merkle depth</div>
+    </div>
+    <div class="stat-card">
+      <div class="val yellow">&lt;1s</div>
+      <div class="lbl">proof generation</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- WHAT WE BUILT -->
+<!-- ================================================================ -->
+<section>
+  <h2>What We Built</h2>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:24px; font-size:0.5em; text-align:left">
+    <div style="background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:16px">
+      <div style="color:#c084fc; font-weight:700; margin-bottom:8px">📜 Smart Contracts</div>
+      <div style="color:#aaa; line-height:1.8">
+        <code>PrivacyEscrowZK.sol</code> — Poseidon tree + ZK verify<br>
+        <code>Groth16Verifier.sol</code> — on-chain proof verification<br>
+        <code>ChannelPayee.sol</code> — per-session smart account<br>
+        <code>ChannelPayeeFactory.sol</code> — CREATE2 deployer<br>
+        <span class="dim">Solidity 0.8.24, Foundry, via-ir optimizer</span>
+      </div>
+    </div>
+    <div style="background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:16px">
+      <div style="color:#60a5fa; font-weight:700; margin-bottom:8px">⚡ ZK Circuits</div>
+      <div style="color:#aaa; line-height:1.8">
+        <code>note_redeem.circom</code> — ~5,700 constraints<br>
+        Poseidon(2) Merkle proof (depth 20)<br>
+        Poseidon(5) note commitment<br>
+        Poseidon(2) nullifier derivation<br>
+        <span class="dim">circom 2.0, snarkjs, Groth16</span>
+      </div>
+    </div>
+    <div style="background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:16px">
+      <div style="color:#4ade80; font-weight:700; margin-bottom:8px">🔍 Observer UI</div>
+      <div style="color:#aaa; line-height:1.8">
+        Side-by-side transaction graph visualizer<br>
+        D3 force-directed graph + SSE streaming<br>
+        Real-time Tempo mainnet events<br>
+        <span class="dim">Hono server, TypeScript</span>
+      </div>
+    </div>
+    <div style="background:#12121a; border:1px solid #2a2a3e; border-radius:10px; padding:16px">
+      <div style="color:#fbbf24; font-weight:700; margin-bottom:8px">🚀 Mainnet Deployment</div>
+      <div style="color:#aaa; line-height:1.8">
+        Tempo mainnet (Chain 4217)<br>
+        Full simulation: 2 payers × 2 merchants<br>
+        ZK proof generation + on-chain verification<br>
+        <span class="dim">Poseidon libs, authenticated RPC</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- COMPATIBILITY -->
+<!-- ================================================================ -->
+<section>
+  <h2>MPP Compatibility</h2>
+  <p style="font-size:0.55em; color:#888">Zero changes to the client SDK</p>
+
+  <div class="graph-box" style="max-width:650px; margin-top:24px; text-align:center">
+    <div style="font-size:0.55em; font-family:var(--r-code-font); line-height:1.8; color:#aaa; text-align:left">
+      <span class="cmt">// Standard MPP voucher signing — unchanged</span><br>
+      <span class="kw">domain</span>: {<br>
+      &nbsp;&nbsp;name: <span class="str">"Tempo Stream Channel"</span>,<br>
+      &nbsp;&nbsp;version: <span class="str">"1"</span>,<br>
+      &nbsp;&nbsp;chainId: <span class="num">4217</span>,<br>
+      &nbsp;&nbsp;verifyingContract: escrowAddress<br>
+      }<br>
+      <span class="kw">types</span>: { Voucher: [channelId, cumulativeAmount] }<br><br>
+      <span class="cmt">// Client doesn't know if it's talking to</span><br>
+      <span class="cmt">// TempoStreamChannel or PrivacyEscrowZK</span><br>
+      <span class="cmt">// Same vouchers. Same signatures. Same SDK.</span>
+    </div>
+  </div>
+
+  <p class="fragment" style="font-size:0.6em; color:#4ade80; margin-top:24px">
+    Privacy is opt-in at the server level — clients are unaware
+  </p>
+</section>
+<!-- ================================================================ -->
+<!-- PRIVACY GUARANTEES — FULL PICTURE -->
+<!-- ================================================================ -->
+<section>
+  <h2>Privacy Guarantees</h2>
+  <p style="font-size:0.55em; color:#888">Three layers working together</p>
+
+  <div style="display:flex; gap:14px; margin-top:24px; font-size:0.48em">
+    <div style="flex:1; background:#12121a; border:1px solid #60a5fa; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#60a5fa; font-weight:700; font-size:1.15em; margin-bottom:10px">Layer 1: Channel Open</div>
+      <div style="color:#aaa; line-height:1.7">
+        <strong style="color:#e0e0e8">ChannelPayeeFactory</strong><br>
+        CREATE2 per-session contract<br>
+        One-time keypair per merchant<br>
+        <span class="green">→ Hides merchant at open time</span>
+      </div>
+    </div>
+    <div style="flex:1; background:#12121a; border:1px solid #fbbf24; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#fbbf24; font-weight:700; font-size:1.15em; margin-bottom:10px">Layer 2: Settlement</div>
+      <div style="color:#aaa; line-height:1.7">
+        <strong style="color:#e0e0e8">Poseidon Note Tree</strong><br>
+        Note = Poseidon(5 private fields)<br>
+        Funds stay in shared escrow pool<br>
+        <span class="green">→ Breaks payer↔merchant link</span>
+      </div>
+    </div>
+    <div style="flex:1; background:#12121a; border:1px solid #4ade80; border-radius:10px; padding:18px; text-align:left">
+      <div style="color:#4ade80; font-weight:700; font-size:1.15em; margin-bottom:10px">Layer 3: Redemption</div>
+      <div style="color:#aaa; line-height:1.7">
+        <strong style="color:#e0e0e8">Groth16 ZK Proof</strong><br>
+        Proves note ownership in ZK<br>
+        Only nullifier + proof on-chain<br>
+        <span class="green">→ Zero preimage leakage</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="fragment" style="margin-top: 24px; font-size:0.55em; text-align:center">
+    <span class="dim">Anonymity set scales with the number of merchants using the same escrow instance</span>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- MAINNET DEMO RESULTS -->
+<!-- ================================================================ -->
+<section>
+  <h2>Mainnet Results</h2>
+  <p style="font-size:0.55em; color:#888">Full ZK flow executed on Tempo mainnet (Chain 4217)</p>
+
+  <div class="stat-grid" style="margin-top:24px">
+    <div class="stat-card" style="border-color:#60a5fa">
+      <div class="val blue">2</div>
+      <div class="lbl">Payers</div>
+    </div>
+    <div class="stat-card" style="border-color:#fbbf24">
+      <div class="val yellow">2</div>
+      <div class="lbl">Merchants</div>
+    </div>
+    <div class="stat-card" style="border-color:#4ade80">
+      <div class="val green">2</div>
+      <div class="lbl">ZK Redemptions</div>
+    </div>
+  </div>
+
+  <div class="code-box" style="font-size:0.45em; max-width:700px; margin-top:20px">
+<span class="cmt">// What the chain recorded for each redemption:</span><br>
+<span class="fn">redeemNote</span>(<br>
+&nbsp;&nbsp;proof: &nbsp;<span class="str">[0x1a3f…, 0x2b4e…, …]</span>&nbsp;&nbsp;<span class="cmt">// opaque proof</span><br>
+&nbsp;&nbsp;nullifier: <span class="str">0x7c9a…</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// prevents double-spend</span><br>
+&nbsp;&nbsp;root: <span class="str">0x4e2d…</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// shared Merkle root</span><br>
+&nbsp;&nbsp;amount: <span class="num">5000</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// $0.005</span><br>
+&nbsp;&nbsp;recipient: <span class="str">0xfresh…</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cmt">// brand new address</span><br>
+)<br>
+<br>
+<span class="cmt">// NOT on chain: channelId, merchantPubKey, blinding, noteRandomness</span><br>
+<span class="cmt">//               which payer, which session, which merchant</span>
+  </div>
+
+  <div style="margin-top:16px; font-size:0.5em">
+    <span class="mono dim">PrivacyEscrowZK: 0x472d53B0…97fA9d</span> ·
+    <span class="mono dim">Groth16Verifier: 0x48f22b5C…6abd9</span>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- OBSERVER DEMO -->
+<!-- ================================================================ -->
+<section>
+  <h2>Live Observer</h2>
+  <p style="font-size:0.55em; color:#888">Side-by-side: standard vs ZK escrow — same chain, same time</p>
+
+  <div class="two-col" style="margin-top:24px">
+    <div class="graph-box exposed" style="min-height:200px">
+      <div style="font-size:0.5em; color:#f87171; font-weight:700; margin-bottom:14px">STANDARD — Full Graph Exposed</div>
+      <div class="flow-row" style="font-size:0.85em">
+        <div class="flow-node node-payer" style="font-size:0.85em">0xa1…</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node node-merchant" style="font-size:0.85em">0xm1…</div>
+      </div>
+      <div class="flow-row" style="font-size:0.85em">
+        <div class="flow-node node-payer" style="font-size:0.85em">0xa2…</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node node-merchant" style="font-size:0.85em">0xm2…</div>
+      </div>
+      <div style="font-size:0.45em; color:#f87171; margin-top:12px">
+        Settled: 0xa1→0xm1 $0.005 USDC<br>
+        ChannelClosed: 0xa2→0xm2
+      </div>
+    </div>
+    <div class="graph-box private" style="min-height:200px">
+      <div style="font-size:0.5em; color:#4ade80; font-weight:700; margin-bottom:14px">PRIVACY — Merchant Identity Hidden</div>
+      <div class="flow-row" style="font-size:0.85em">
+        <div class="flow-node node-payer" style="font-size:0.85em">0xa1…</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node node-escrow" style="font-size:0.85em">Pool</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node node-hidden" style="font-size:0.85em">???</div>
+      </div>
+      <div class="flow-row" style="font-size:0.85em">
+        <div class="flow-node node-zk" style="font-size:0.85em">ZK ✓</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node node-fresh" style="font-size:0.85em">0xfr…</div>
+      </div>
+      <div style="font-size:0.45em; color:#4ade80; margin-top:12px">
+        NoteCommitted: index 4, commitment 0x2e8a…<br>
+        NoteRedeemed: nullifier 0x7c9a… → 0xfresh…
+      </div>
+    </div>
+  </div>
+
+  <p style="font-size:0.5em; color:#555; margin-top:16px">
+    <code>npx tsx demo/src/observer-compare.ts</code> → localhost:3001
+  </p>
+</section>
+
+<!-- ================================================================ -->
+<!-- TRUST MODEL -->
+<!-- ================================================================ -->
+<section>
+  <h2>Trust Model</h2>
+
+  <div style="margin-top:24px; font-size:0.55em; text-align:left; max-width:700px; margin-left:auto; margin-right:auto">
+    <div style="margin-bottom:20px">
+      <div style="color:#4ade80; font-weight:600; margin-bottom:6px">✅ Trustless</div>
+      <div style="color:#aaa; line-height:1.8; padding-left:20px">
+        Settlement amounts — contract computes deltas from cumulative vouchers<br>
+        Recipient assignment — merchantCommitment bound at channel open<br>
+        Double-spend — nullifier set is on-chain state<br>
+        Note validity — Groth16 verifier is immutable contract
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="color:#fbbf24; font-weight:600; margin-bottom:6px">⚡ Privacy strength scales with</div>
+      <div style="color:#aaa; line-height:1.8; padding-left:20px">
+        Number of merchants sharing the escrow (anonymity set)<br>
+        Redemption timing (delayed redemption prevents correlation)<br>
+        Amount uniformity (micro-payments are harder to distinguish)
+      </div>
+    </div>
+    <div>
+      <div style="color:#f87171; font-weight:600; margin-bottom:6px">⚠️ Not hidden</div>
+      <div style="color:#aaa; line-height:1.8; padding-left:20px">
+        Payer identity and deposit amounts remain visible<br>
+        Single-merchant escrow = anonymity set of 1
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- CLOSING -->
+<!-- ================================================================ -->
+<section>
+  <h1 style="font-size:1.6em">🔒 PrivacyEscrowZK</h1>
+  <p style="font-size:0.7em; color:#aaa; margin-top:16px">
+    Your AI agents' payment history<br>shouldn't be everyone's business.
+  </p>
+
+  <div style="margin-top:40px; font-size:0.5em; color:#555; font-family:var(--r-code-font)">
+    <div>Poseidon Commitments · Groth16 Proofs · Incremental Merkle Tree</div>
+    <div style="margin-top:8px">Per-Channel Smart Accounts · Deployed on Tempo Mainnet</div>
+  </div>
+
+  <div style="margin-top:40px; display:flex; justify-content:center; gap:30px; font-size:0.45em; color:#666">
+    <div>PrivacyEscrowZK: <span class="mono">0x472d…fA9d</span></div>
+    <div>Groth16Verifier: <span class="mono">0x48f2…abd9</span></div>
+    <div>Chain: <span class="mono">4217</span></div>
+  </div>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: 'c/t',
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    center: true,
+    plugins: [RevealHighlight],
+  });
+</script>
+</body>
+</html>

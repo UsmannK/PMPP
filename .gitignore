@@ -1,0 +1,31 @@
+# Foundry
+out/
+cache/
+broadcast/
+foundry.lock
+
+# Node
+node_modules/
+
+# Circuits — build artifacts (large zkeys/ptau)
+circuits/build/*.ptau
+circuits/build/*.zkey
+circuits/build/*.r1cs
+circuits/build/*.sym
+circuits/build/note_redeem_js/
+
+# Keep verification key and input for reproducibility
+!circuits/build/verification_key.json
+!circuits/build/input.json
+
+# Environment / secrets
+.env
+*.env
+script/mainnet-addrs.env
+demo/scripts/mainnet-keys.json
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
