@@ -22,7 +22,7 @@ const STANDARD_ESCROW: Address = "0x33b901018174DDabE4841042ab76ba85D4e24f25";
 const STANDARD_RPC = process.env.RPC_URL ?? "https://gracious-knuth:goofy-chandrasekhar@rpc.tempo.xyz";
 
 // PrivacyEscrowZK — deployed on Tempo mainnet
-const PRIVACY_ESCROW: Address = (process.env.ESCROW_CONTRACT as Address) ?? "0x472d53B0F5d3b8e5E6f03859961a0db63a97fA9d";
+const PRIVACY_ESCROW: Address = (process.env.ESCROW_CONTRACT as Address) ?? "0x1FAc145aC33A3760B8c1Ed8dEEa5Abb8F3F90bc6";
 const PRIVACY_RPC = STANDARD_RPC;
 
 const POLL_INTERVAL = Number(process.env.POLL_INTERVAL ?? 3000);

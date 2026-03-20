@@ -8,7 +8,6 @@ import {
   createWalletClient,
   http,
   keccak256,
-  encodePacked,
   encodeAbiParameters,
   type Address,
   type Hex,
@@ -67,20 +66,22 @@ const channelPayeeAbi = [
 // ---------------------------------------------------------------------------
 
 /**
- * Manages one-time merchant keys for PrivacyEscrow sessions.
+ * Manages one-time merchant keys for PrivacyEscrowZK sessions.
  *
  * For each session, the merchant generates a fresh keypair. The factory
  * computes a deterministic ChannelPayee address from the one-time key.
- * The client opens a channel to that address (standard open — no changes).
+ * The server tells the payer to open a channel to that address.
  *
  * The server signs setMerchantCommitment and close operations with the
  * one-time key. Anyone can relay these signed calls to the ChannelPayee
  * contract.
  */
 export class MerchantKeyManager {
-  /** Merchant's long-term secrets for note redemption */
-  private merchantPubKey: Hex;
-  private merchantBlinding: Hex;
+  /** Merchant's long-term secrets for note redemption (Poseidon field elements) */
+  private merchantPubKey: bigint;
+  private merchantBlinding: bigint;
+
+  /** Poseidon(merchantPubKey, blinding) as bytes32 */
   readonly merchantCommitment: Hex;
 
   /** Factory contract address */
@@ -89,32 +90,66 @@ export class MerchantKeyManager {
   /** RPC endpoint */
   private rpcUrl: string;
 
+  /** Poseidon hash function (loaded async) */
+  private poseidonFn: any;
+  private F: any;
+
   /** Map of session payee address → one-time account */
   private sessions = new Map<
     Address,
     { account: PrivateKeyAccount; deployed: boolean }
   >();
 
-  constructor(config: {
-    /** Merchant's long-term public key (for note commitments) */
-    merchantPubKey: Hex;
-    /** Merchant's long-term blinding factor */
-    merchantBlinding: Hex;
+  private constructor(
+    merchantPubKey: bigint,
+    merchantBlinding: bigint,
+    commitment: Hex,
+    factoryAddress: Address,
+    rpcUrl: string,
+    poseidonFn: any,
+    F: any,
+  ) {
+    this.merchantPubKey = merchantPubKey;
+    this.merchantBlinding = merchantBlinding;
+    this.merchantCommitment = commitment;
+    this.factoryAddress = factoryAddress;
+    this.rpcUrl = rpcUrl;
+    this.poseidonFn = poseidonFn;
+    this.F = F;
+  }
+
+  static async create(config: {
+    /** Merchant's long-term public key (field element as decimal or hex string) */
+    merchantPubKey: string;
+    /** Merchant's long-term blinding factor (field element as decimal or hex string) */
+    merchantBlinding: string;
     /** ChannelPayeeFactory contract address */
     factoryAddress: Address;
     /** RPC URL */
     rpcUrl?: string;
-  }) {
-    this.merchantPubKey = config.merchantPubKey;
-    this.merchantBlinding = config.merchantBlinding;
-    this.merchantCommitment = keccak256(
-      encodeAbiParameters(
-        [{ type: "bytes32" }, { type: "bytes32" }],
-        [config.merchantPubKey, config.merchantBlinding]
-      )
+  }): Promise<MerchantKeyManager> {
+    const { buildPoseidon } = await import("circomlibjs");
+    const poseidonFn = await buildPoseidon();
+    const F = poseidonFn.F;
+
+    const pubKey = BigInt(config.merchantPubKey);
+    const blinding = BigInt(config.merchantBlinding);
+
+    const h = poseidonFn([F.e(pubKey), F.e(blinding)]);
+    const commitment = BigInt(F.toString(h));
+    const commitmentHex = ("0x" + commitment.toString(16).padStart(64, "0")) as Hex;
+
+    console.log(`[merchant] Poseidon commitment: ${commitmentHex.slice(0, 18)}…`);
+
+    return new MerchantKeyManager(
+      pubKey,
+      blinding,
+      commitmentHex,
+      config.factoryAddress,
+      config.rpcUrl ?? "http://localhost:8545",
+      poseidonFn,
+      F,
     );
-    this.factoryAddress = config.factoryAddress;
-    this.rpcUrl = config.rpcUrl ?? "http://localhost:8545";
   }
 
   /**
